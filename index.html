@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>אשף החזרי מס — בינה בחשבון</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&family=Assistant:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--primary:#4F46E5;--primary-hover:#6366F1;--secondary:#06B6D4;--ink:#180F3A;--text:#111827;--text-2:#374151;--muted:#6B7280;--border:#D1D5DB;--divider:#F3F4F6;--surface:#F9FAFB;--card:#FFFFFF;--error:#DC2626;--info:#2563EB;--info-bg:#EFF6FF;--success:#16A34A;--success-bg:#F0FDF4;--font-d:'Rubik','Assistant',Arial,sans-serif;--font-b:'Assistant','Rubik',Arial,sans-serif}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;height:100%;overflow:hidden;-webkit-font-smoothing:antialiased;font-family:var(--font-b)}
+a{color:var(--primary);text-decoration:none}
+a:hover{color:var(--primary-hover)}
+input::placeholder{color:var(--muted)}
+input:focus{outline:none;border-color:var(--primary) !important;box-shadow:0 0 0 4px rgba(99,102,241,.15)}
+button{font-family:var(--font-d)}
+.wrap{background:var(--surface);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden}
+.field label{display:block;font-family:var(--font-d);font-size:13px;font-weight:600;color:var(--text-2);margin-bottom:8px}
+.field input{width:100%;height:44px;border-radius:8px;border:1px solid var(--border);background:#fff;padding:0 14px;font-family:var(--font-b);font-size:16px;color:var(--text)}
+.btn{height:44px;border-radius:8px;font-family:var(--font-d);font-size:15px;font-weight:600;cursor:pointer;transition:background-color .15s ease,color .15s ease}
+.btn-primary{background:var(--primary);color:#fff;border:none}
+.btn-primary:hover{background:var(--primary-hover)}
+.badge{display:inline-flex;align-items:center;height:28px;padding:0 14px;border-radius:999px;background:var(--info-bg);color:var(--info);font-family:var(--font-d);font-size:12px;font-weight:600;white-space:nowrap}
+.toggle-btn{flex:1;padding:10px;border-radius:8px;font-family:var(--font-d);font-size:13px;font-weight:600;cursor:pointer;text-align:center}
+.toggle-active{border:2px solid var(--primary);background:var(--primary);color:#fff}
+.toggle-inactive{border:1px solid var(--border);background:#fff;color:var(--text-2)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header style="flex:none;border-bottom:1px solid var(--divider)">
+    <div style="padding:14px 40px;display:flex;align-items:center;justify-content:space-between">
+      <div style="display:flex;align-items:center;gap:10px">
+        <svg width="26" height="26" viewBox="-10 -10 208 227"><g stroke="#180F3A" stroke-width="3" stroke-linecap="round" fill="none"><line x1="52" y1="20" x2="14" y2="52"></line><line x1="14" y1="52" x2="10" y2="120"></line><line x1="10" y1="120" x2="44" y2="160"></line><line x1="44" y1="160" x2="54" y2="80"></line><line x1="54" y1="80" x2="52" y2="20"></line></g><g fill="#180F3A"><circle cx="52" cy="20" r="9"></circle><circle cx="14" cy="52" r="7"></circle><circle cx="54" cy="80" r="6"></circle><circle cx="10" cy="120" r="8"></circle><circle cx="44" cy="160" r="10"></circle></g><g fill="#07A8A5"><rect x="75" y="120" width="16" height="32" rx="2"></rect><rect x="104" y="101" width="16" height="51" rx="2"></rect><rect x="132" y="85" width="16" height="67" rx="2"></rect><rect x="161" y="55" width="16" height="97" rx="2"></rect></g><g stroke="#07A8A5" stroke-width="8" stroke-linecap="round" fill="none"><line x1="43.0" y1="133.0" x2="174.6" y2="21.1"></line></g><polygon fill="#07A8A5" points="183.0,14.0 173.9,34.2 161.6,19.7"></polygon></svg>
+        <div style="display:flex;flex-direction:column;line-height:1.2">
+          <span style="font-family:var(--font-d);font-weight:700;font-size:15px;color:var(--ink)">בינה בחשבון</span>
+          <span style="font-size:10.5px;color:var(--muted)">אשף החזרי מס</span>
+        </div>
+      </div>
+      <span class="badge">פגישת הדגמה ללא עלות</span>
+    </div>
+  </header>
+
+  <div style="flex:1;min-height:0;display:grid;grid-template-columns:1.15fr 1fr;gap:36px;align-items:center;padding:8px 40px">
+
+    <div style="min-width:0">
+      <h1 style="font-family:var(--font-d);font-weight:700;font-size:clamp(22px,2.6vw,32px);line-height:1.2;color:var(--text);margin:0">האשף שממלא לכם את טפסי החזר המס — תוך דקות</h1>
+      <p style="font-size:15px;line-height:1.5;color:var(--text-2);max-width:480px;margin:10px 0 0">האשף המבוסס על בינה מלאכותית עוסק במילוי טפסי החזרי מס בלבד. מעלים מסמכים, והאשף ממלא עבורכם את הטפסים הרלוונטיים. ההגשה לרשות המסים באחריות המשתמש בלבד.</p>
+
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:18px;max-width:480px">
+        <div style="display:flex;gap:10px;align-items:flex-start">
+          <div style="width:28px;height:28px;border-radius:8px;background:rgba(79,70,229,.12);display:flex;align-items:center;justify-content:center;flex:none">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 16V4M12 4l-4 4M12 4l4 4" stroke="#4F46E5" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path><path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke="#4F46E5" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+          </div>
+          <div>
+            <div style="font-family:var(--font-d);font-weight:700;font-size:13px;color:var(--text)">העלאת מסמכים</div>
+            <div style="font-size:12.5px;line-height:1.35;color:var(--text-2)">מעלים את טפסי רשות המסים 1301, 1322, 1325, 1326 ודו"ח ניכוי מס במקור של הבנק.</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start">
+          <div style="width:28px;height:28px;border-radius:8px;background:rgba(6,182,212,.14);display:flex;align-items:center;justify-content:center;flex:none">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 12l2 2 4-4" stroke="#06B6D4" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path><rect x="4" y="4" width="16" height="16" rx="3" stroke="#06B6D4" stroke-width="1.8"></rect></svg>
+          </div>
+          <div>
+            <div style="font-family:var(--font-d);font-weight:700;font-size:13px;color:var(--text)">מילוי אוטומטי של הטפסים</div>
+            <div style="font-size:12.5px;line-height:1.35;color:var(--text-2)">האשף ממלא עבורכם את טפסי רשות המסים הרלוונטיים.</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start">
+          <div style="width:28px;height:28px;border-radius:8px;background:rgba(79,70,229,.12);display:flex;align-items:center;justify-content:center;flex:none">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="#4F46E5" stroke-width="1.8"></circle><path d="M9.5 9.5l5 5M9.5 14.5l5-5" stroke="#4F46E5" stroke-width="1.8" stroke-linecap="round"></path></svg>
+          </div>
+          <div>
+            <div style="font-family:var(--font-d);font-weight:700;font-size:13px;color:var(--text)">אומדן גובה ההחזר</div>
+            <div style="font-size:12.5px;line-height:1.35;color:var(--text-2)">ניתן לתת הערכה לגובה ההחזר על סמך המסמכים שהעליתם.</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start">
+          <div style="width:28px;height:28px;border-radius:8px;background:rgba(6,182,212,.14);display:flex;align-items:center;justify-content:center;flex:none">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M3 11l17-7-6.5 17-3-7-7-3z" stroke="#06B6D4" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"></path></svg>
+          </div>
+          <div>
+            <div style="font-family:var(--font-d);font-weight:700;font-size:13px;color:var(--text)">טפסים מוכנים להגשה</div>
+            <div style="font-size:12.5px;line-height:1.35;color:var(--text-2)">ההגשה לרשות המסים באחריות המשתמש בלבד.</div>
+          </div>
+        </div>
+      </div>
+
+      <p style="margin-top:14px;font-size:11.5px;color:var(--muted)">ללא עלות מראש · מילוי תוך דקות · בלי התחייבות</p>
+    </div>
+
+    <div style="min-width:0;background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:0 1px 2px rgba(17,24,39,.06);padding:24px;max-height:100%;overflow:auto">
+      <div id="successState" style="display:none;align-items:flex-start;gap:12px;padding:14px 18px;border-radius:8px;background:var(--success-bg);border:1px solid rgba(22,163,74,.35)">
+        <span style="width:18px;height:18px;min-width:18px;border-radius:50%;background:var(--success);margin-top:2px"></span>
+        <div>
+          <div style="font-family:var(--font-d);font-size:13px;font-weight:700;color:var(--success)">תודה! הפרטים התקבלו</div>
+          <div style="font-size:12px;color:var(--text-2);margin-top:4px">ניצור איתכם קשר בקרוב לתיאום פגישת ההדגמה.</div>
+        </div>
+      </div>
+
+      <div id="formState">
+        <div style="font-family:var(--font-d);font-weight:700;font-size:17px;color:var(--text);margin:0 0 4px">רוצים לראות את האשף בפעולה?</div>
+        <p style="font-size:12.5px;color:var(--text-2);margin:0 0 12px">השאירו פרטים ונקבע פגישת הדגמה קצרה, בלי התחייבות.</p>
+        <form id="leadForm" style="display:flex;flex-direction:column;gap:10px">
+          <div class="field"><label>שם מלא</label><input id="f_name" type="text" placeholder="לדוגמה: ישראל ישראלי" required></div>
+          <div class="field"><label>טלפון</label><input id="f_phone" type="tel" placeholder="XXX-XXXXXXX" required></div>
+          <div>
+            <label style="display:block;font-family:var(--font-d);font-size:12px;font-weight:600;color:var(--text-2);margin-bottom:6px">מי פונה?</label>
+            <div style="display:flex;gap:8px">
+              <button type="button" id="btn_individual" class="toggle-btn toggle-active">אדם פרטי</button>
+              <button type="button" id="btn_firm" class="toggle-btn toggle-inactive">משרד/חברה</button>
+            </div>
+          </div>
+          <div class="field"><label>אימייל</label><input id="f_email" type="email" placeholder="name@example.com" required></div>
+          <p id="errorMsg" style="display:none;color:var(--error);font-size:12px;margin:0">נא למלא את כל השדות לפני שליחה.</p>
+          <button type="submit" class="btn btn-primary" style="width:100%">קביעת פגישת הדגמה</button>
+          <p style="font-size:10.5px;color:var(--muted);text-align:center;margin:0">הפרטים שלכם מאובטחים ולא יועברו לצד ג׳.</p>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <footer style="flex:none;padding:12px 40px;border-top:1px solid var(--divider);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <span style="font-size:12px;color:var(--muted)">© 2026 בינה בחשבון · כל הזכויות שמורות</span>
+    <span style="font-size:11px;color:var(--muted)">אשף החזרי מס מבוסס בינה מלאכותית</span>
+  </footer>
+
+</div>
+<template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#4F46E5"/><text x="50" y="58" font-size="34" text-anchor="middle" fill="#fff" font-family="Arial">בב</text></svg></template>
+<script>
+let applicantType='individual';
+const btnIndividual=document.getElementById('btn_individual');
+const btnFirm=document.getElementById('btn_firm');
+function setType(t){
+  applicantType=t;
+  btnIndividual.className='toggle-btn '+(t==='individual'?'toggle-active':'toggle-inactive');
+  btnFirm.className='toggle-btn '+(t==='firm'?'toggle-active':'toggle-inactive');
+}
+btnIndividual.addEventListener('click',()=>setType('individual'));
+btnFirm.addEventListener('click',()=>setType('firm'));
+
+document.getElementById('leadForm').addEventListener('submit',function(e){
+  e.preventDefault();
+  const name=document.getElementById('f_name').value.trim();
+  const phone=document.getElementById('f_phone').value.trim();
+  const email=document.getElementById('f_email').value.trim();
+  const errorMsg=document.getElementById('errorMsg');
+  if(!name||!phone||!email){errorMsg.style.display='block';return}
+  errorMsg.style.display='none';
+  const applicantTypeLabel=applicantType==='firm'?'משרד רואי חשבון':'אדם פרטי';
+  fetch('https://formsubmit.co/ajax/yairoppen@gmail.com',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Accept':'application/json'},
+    body:JSON.stringify({_subject:'פגישת הדגמה אשף החזרי מס',_template:'table',_captcha:'false',_replyto:email,'שם מלא':name,'טלפון':phone,'אימייל':email,'סוג פונה':applicantTypeLabel})
+  }).catch(()=>{}).finally(()=>{
+    document.getElementById('formState').style.display='none';
+    document.getElementById('successState').style.display='flex';
+  });
+});
+</script>
+</body>
+</html>
