@@ -4657,16 +4657,16 @@ function Step0Identity({ data, setData, onNext }) {
     setStatus('checking');
     let res;
     try {
-      res = await fetch(IDENTITY_SERVER_URL, {
-        method: 'POST',
-        // text/plain (לא application/json) בכוונה - כדי שהדפדפן יתייחס לזה
-        // כ"בקשה פשוטה" ולא ישלח preflight (OPTIONS) לפני כן. Google Apps
-        // Script Web Apps לא מטפלים טוב ב-preflight חוצה-מקור, וזה גורם
-        // ל-fetch להיכשל ברמת הרשת. Apps Script קורא את הגוף כטקסט/JSON
-        // ללא תלות בכותרת Content-Type, אז זה לא משנה שם דבר.
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ fullName: fullName.trim(), idNumber: idNumber.trim(), taxYear: data.taxYear }),
-      });
+      // GET עם query params בכוונה, לא POST עם גוף JSON - כי Google Apps
+      // Script Web Apps לא תומכים בכלל ב-doOptions (אין להם דרך לענות
+      // ל-preflight), כך שכל בקשה חוצה-מקור שדורשת preflight נכשלת ברמת
+      // הרשת. GET רגיל בלי כותרות מיוחדות לעולם לא דורש preflight.
+      const url = IDENTITY_SERVER_URL
+        + '?action=verify'
+        + '&fullName=' + encodeURIComponent(fullName.trim())
+        + '&idNumber=' + encodeURIComponent(idNumber.trim())
+        + '&taxYear=' + encodeURIComponent(data.taxYear);
+      res = await fetch(url, { method: 'GET' });
     } catch (e) {
       setStatus('offline');
       return;
