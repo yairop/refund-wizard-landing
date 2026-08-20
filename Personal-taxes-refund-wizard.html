@@ -4684,6 +4684,8 @@ function Step0Identity({ data, setData, onNext }) {
       onNext();
     } else if (res.status === 503 || (json && json.reason === 'customers_file_locked')) {
       setStatus('offline');
+    } else if (json && json.reason === 'payment_incomplete') {
+      setStatus('payment_incomplete');
     } else {
       setStatus('invalid');
     }
@@ -4720,6 +4722,12 @@ function Step0Identity({ data, setData, onNext }) {
         <div style={{ marginTop: 20 }}>
           <Alert tone="error" title="הזדהות נכשלה"
             description="רישיון לשנת המס שהוקשה אינו בתוקף, או ת.ז. של הנישום שגויה." />
+        </div>
+      )}
+      {status === 'payment_incomplete' && (
+        <div style={{ marginTop: 20 }}>
+          <Alert tone="error" title="לא הושלם תהליך התשלום"
+            description="לא הושלם תהליך התשלום." />
         </div>
       )}
       {status === 'offline' && (
