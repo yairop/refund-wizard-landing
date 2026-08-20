@@ -4659,7 +4659,12 @@ function Step0Identity({ data, setData, onNext }) {
     try {
       res = await fetch(IDENTITY_SERVER_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        // text/plain (לא application/json) בכוונה - כדי שהדפדפן יתייחס לזה
+        // כ"בקשה פשוטה" ולא ישלח preflight (OPTIONS) לפני כן. Google Apps
+        // Script Web Apps לא מטפלים טוב ב-preflight חוצה-מקור, וזה גורם
+        // ל-fetch להיכשל ברמת הרשת. Apps Script קורא את הגוף כטקסט/JSON
+        // ללא תלות בכותרת Content-Type, אז זה לא משנה שם דבר.
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({ fullName: fullName.trim(), idNumber: idNumber.trim(), taxYear: data.taxYear }),
       });
     } catch (e) {
