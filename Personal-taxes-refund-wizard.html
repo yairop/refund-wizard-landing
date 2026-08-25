@@ -4427,6 +4427,10 @@ function emptyForm106() {
     incomeType: 'salary', // 'salary' (172/158) | 'pension' (258/272)
     salary: '',
     withheld: '',
+    // סכום הקצבה הפטור-קצבה מזכה (סע' 9א., שדה 209) — רלוונטי רק לטופסי קצבה.
+    // מוזן אוטומטית כשמאותר בטופס (ר' parse106Rows), ותמיד ניתן לעריכה ידנית —
+    // כולל כשהטופס לא נקרא כלל (סריקה/תמונה), לפי הנחיית יאיר 2026-08-25.
+    exempt209: '',
     parseStatus: 'manual',
     parseNote: '',
   };
@@ -4489,10 +4493,28 @@ function reconstructReversedRow(row) {
 }
 
 function parse106Rows(rows) {
-  const result = { employerName: '', salary: null, withheld: null, incomeType: 'salary', found: false, creditPoints: null };
+  const result = { employerName: '', salary: null, withheld: null, incomeType: 'salary', found: false, creditPoints: null, exempt209: null, totalGrossPayment: null, multiYear: false };
+  const fullText = rows.map((r) => lineText(r)).join(' ');
+  // סעיף 16, פריט 1: אם הטופס מכסה קצבה חייבת ליותר משנת מס אחת (למשל תשלום
+  // רטרואקטיבי חוצה-שנים), יש לקחת את סה"כ התשלום ברוטו במקום שדה ההכנסה החייבת
+  // הרגיל (258/272). איתור זהיר: לא אומת מול טופס אמיתי שמדגים תרחיש זה, ולכן
+  // מסומן ב-parseNote כדי שהמשתמש יוודא מול המסמך המקורי.
+  result.multiYear = /יותר משנה(?:\s*מס)?\s*אחת/.test(fullText) || /תשלום\s*רטרואקטיבי/.test(fullText);
   for (let i = 0; i < rows.length; i++) {
     const text = lineText(rows[i]);
     const reconstructed = reconstructReversedRow(rows[i]);
+    // שדה 209 — "הקצבה הפטור-קצבה מזכה (סע' 9א.)" — מופיע רק בטופסי קצבה שיש
+    // בהם פטור חלקי/מלא (למשל מגדל 106 של יאיר). דורשים גם הופעת הביטוי הטקסטואלי
+    // הסמוך (לא רק הקוד המספרי) כדי לא להתבלבל עם הופעה מקרית של "209" בטופס.
+    if (result.exempt209 == null && rowHasExactToken(rows[i], '209') &&
+        (text.indexOf('הקצבה הפטור') !== -1 || text.indexOf('קצבה מזכה') !== -1 || (reconstructed && (reconstructed.indexOf('הקצבה הפטור') !== -1 || reconstructed.indexOf('קצבה מזכה') !== -1)))) {
+      const n = pick106Number(rows[i], ['209', '9א']);
+      if (n != null) result.exempt209 = n;
+    }
+    if (result.totalGrossPayment == null && (text.indexOf('סה"כ התשלום ברוטו') !== -1 || text.indexOf('סה״כ התשלום ברוטו') !== -1)) {
+      const n = pick106Number(rows[i], []);
+      if (n != null) result.totalGrossPayment = n;
+    }
     if (!result.employerName && text.indexOf('שם מלא של המעביד') !== -1) {
       // שם המעביד עשוי להופיע באותה שורה או בשורה הבאה (מתחת לכותרת העמודה)
       const m = text.match(new RegExp('([\\u0590-\\u05FF"\'׳״ ]{2,})\\s*שם מלא של המעביד'));
@@ -4548,6 +4570,14 @@ function parse106Rows(rows) {
       if (n != null) { result.withheld = n; result.found = true; }
     }
   }
+  // סעיף 16, פריט 1 (המשך): אם הטופס מכסה יותר משנת מס אחת וגם אותר "סה"כ התשלום
+  // ברוטו", מעדיפים את הסכום הכולל הזה על פני שדה 258/272 הרגיל — הוא הנתון
+  // הנכון להצגה כהכנסה חייבת במקרה הזה.
+  if (result.multiYear && result.totalGrossPayment != null) {
+    result.salary = result.totalGrossPayment;
+    result.incomeType = 'pension';
+    result.found = true;
+  }
   return result;
 }
 
@@ -4558,6 +4588,7 @@ function form106FromParsed(parsed, fileName) {
   f.incomeType = parsed.incomeType || 'salary';
   f.salary = parsed.salary != null ? String(parsed.salary) : '';
   f.withheld = parsed.withheld != null ? String(parsed.withheld) : '';
+  f.exempt209 = parsed.exempt209 != null ? String(parsed.exempt209) : '';
   f.parseStatus = parsed.found ? 'auto' : 'unrecognized';
   // ערך נקודות זיכוי מהטופס (אם נמצא) — לא מוחל אוטומטית על שדה נקודות הזיכוי
   // האישי (שיש לו כבר ברירת מחדל/עריכה ידנית), אלא רק מוצג להשוואה/עדכון ידני.
@@ -4565,6 +4596,8 @@ function form106FromParsed(parsed, fileName) {
   f.parseNote = parsed.found
     ? 'הנתונים חולצו אוטומטית מהקובץ (שדות 172/158/258/272 ו-042) — מנוע זה לא נבדק מול כל סוגי טופס 106 האפשריים, נא לוודא בקפידה מול המסמך המקורי (כולל סוג ההכנסה: משכורת/קצבה).'
       + (parsed.creditPoints ? (' נמצא בטופס ערך נקודות זיכוי: ' + parsed.creditPoints + ' — יש לעדכן ידנית בשדה "נקודות זיכוי" אם שונה מהמוגדר.') : '')
+      + (parsed.exempt209 != null ? (' נמצא סכום קצבה פטורה-קצבה מזכה (סע\' 9א., שדה 209): ' + parsed.exempt209 + ' — נא לוודא מול המסמך.') : '')
+      + (parsed.multiYear ? ' זוהה סימון קצבה חייבת ליותר משנת מס אחת — הוצג "סה"כ התשלום ברוטו" במקום שדה ההכנסה החייבת הרגיל; נא לוודא בקפידה מול הטופס המקורי.' : '')
     : 'לא זוהה מבנה טופס 106 מוכר בקובץ זה — נא להזין את הנתונים ידנית.';
   return f;
 }
@@ -4617,8 +4650,11 @@ function sumForm106(list) {
       salary: s.salary + (isPension ? 0 : amount),
       pension: s.pension + (isPension ? amount : 0),
       withheld: s.withheld + num(f.withheld),
+      // סכום הקצבה הפטור-קצבה מזכה (שדה 209) — נצבר בנפרד, ללא תלות בסוג ההכנסה,
+      // כי הוא שדה מידע נפרד בטופס 106 ולא חלק מהכנסה חייבת/משכורת.
+      exempt209: s.exempt209 + num(f.exempt209),
     };
-  }, { salary: 0, pension: 0, withheld: 0 });
+  }, { salary: 0, pension: 0, withheld: 0, exempt209: 0 });
 }
 window.emptyForm106 = emptyForm106;
 window.parseUploadedFilesToForm106s = parseUploadedFilesToForm106s;
@@ -4761,10 +4797,6 @@ function Step1TaxYear({ data, setData, onNext }) {
           <Alert tone="warning" title="מדרגות מס לשנה זו לא אומתו מול המקור הרשמי" description={`מדרגות המס ושווי נקודת הזיכוי לשנת ${data.taxYear} מבוססים על נתונים כלליים ולא נבדקו ישירות מול הוראות טופס 1301 לשנה זו — מומלץ לוודא מול רשות המסים לפני הגשה.`} />
         </div>
       )}
-      <div style={{ height: 24 }} />
-      <Field label="אל: משרד השומה">
-        {plainInput(data.taxOffice, (v) => setData({ ...data, taxOffice: v }))}
-      </Field>
     </StepShell>
   );
 }
@@ -4782,6 +4814,10 @@ function Step2PersonalDetails({ data, setData, onNext, onBack }) {
   return (
     <StepShell title="פרטים אישיים" subtitle="פרטי בן/בת הזוג הרשום/ה ובן/בת הזוג, כפי שיופיעו בדוח"
       footer={<React.Fragment><Button variant="secondary" onClick={onBack}>חזרה</Button><Button variant="primary" onClick={onNext}>המשך</Button></React.Fragment>}>
+      <Field label="אל: משרד השומה">
+        {plainInput(data.taxOffice, (v) => setData({ ...data, taxOffice: v }))}
+      </Field>
+      <div style={{ height: 24 }} />
       <Field label="מצב משפחתי בשנת המס">
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {statuses.map(([k, l]) => (
@@ -5012,6 +5048,17 @@ function Form106Card({ entry, index, onChange, onRemove }) {
           ))}
         </div>
       </Field>
+      {entry.incomeType === 'pension' && (
+        <React.Fragment>
+          <div style={{ height: 10 }} />
+          {/* סכום הקצבה הפטור-קצבה מזכה (סע' 9א., שדה 209) — מוזן אוטומטית כשמאותר
+              בטופס, ותמיד ניתן לעריכה/הזנה ידנית - כולל כשהטופס לא נקרא כלל, לפי
+              דרישת יאיר 2026-08-25. */}
+          <Field label="סכום הקצבה הפטור-קצבה מזכה (סע' 9א., שדה 209)">
+            {plainInput(entry.exempt209, (v) => set('exempt209', v), { direction: 'ltr' })}
+          </Field>
+        </React.Fragment>
+      )}
     </div>
   );
 }
@@ -5635,24 +5682,34 @@ function computeFormValues(data) {
     pension_spouse: needsSpouse ? pensionPart(sp) : 0,
     dividend25_registered: rate(reg, 25),
     dividend25_spouse: needsSpouse ? rate(sp, 25) : 0,
-    interest25_registered: irate(reg, 25),
-    interest25_spouse: needsSpouse ? irate(sp, 25) : 0,
+    // שדה 157/257 (טופס 1301) הוא יעד ההעברה עבור שורה 6 ("הכנסה חייבת") של סעיף
+    // ג' בנספח ג, בשיעור 25% - ושורה 1 שם היא הסכום המשולב של רווח הון + דיבידנד
+    // + ריבית מני"ע (לא רווח הון בלבד - תוקן 2026-08-25 לפי הבהרת יאיר: שיבוץ
+    // הדיבידנד/ריבית בטבלת עזר נפרדת היה טעות, הם חלק משורה 1 הראשית). לכן שדה
+    // 157/257 = (רווח הון+דיבידנד+ריבית ב-25%) פחות קיזוז ההפסד ב-25% = בדיוק
+    // capGainsNetByRate[25] (שכבר "רווח הון פחות הפסד") + דיבידנד[25] + ריבית[25].
+    interest25_registered: irate(reg, 25) + rate(reg, 25) + Math.round((reg.securities.capGainsNetByRate && reg.securities.capGainsNetByRate[25]) || 0),
+    interest25_spouse: needsSpouse ? irate(sp, 25) + rate(sp, 25) + Math.round((sp.securities.capGainsNetByRate && sp.securities.capGainsNetByRate[25]) || 0) : 0,
     interest15_registered: irate(reg, 15),
     interest15_spouse: needsSpouse ? irate(sp, 15) : 0,
     turnover_total: Math.round(reg.securities.turnover + (needsSpouse ? sp.securities.turnover : 0)),
-    exempt_total: 0,
+    // סעיף 209 — סכום הקצבה הפטור-קצבה מזכה, מסוכם מכל טפסי ה-106 (שדה 209 בכל
+    // טופס, ר' sumForm106) — היה מקובע כ-0 עד 2026-08-25, לפי דרישת יאיר.
+    exempt_total: Math.round(reg.salary.from106.exempt209 + (needsSpouse ? sp.salary.from106.exempt209 : 0)),
     withheld_salary_total: Math.round(reg.salary.withheld + (needsSpouse ? sp.salary.withheld : 0)),
     withheld_securities_total: Math.round(reg.securities.totalWithheld + (needsSpouse ? sp.securities.totalWithheld : 0)),
     // מספר אישורי 867 (בנק) שצורפו — שדה 54/037 בטופס 1301.
     securities_certificates_count: (data.securities || []).length,
-    // רווח הון גולמי (לפני קיזוז הפסד) לפי שיעור, משני בני הזוג יחד — שורה 1
-    // בסעיף ג' בנספח ג (טופס 1322). המקור: capGainsGrossByRate שנחשב פעם אחת
-    // ב-calcSecuritiesForOwner ומוזן גם לכאן וגם לחישוב הרווח נטו/המס.
-    capgain_gross_15: capgainRate(reg, sp, needsSpouse, 15, 'capGainsGrossByRate'),
-    capgain_gross_20: capgainRate(reg, sp, needsSpouse, 20, 'capGainsGrossByRate'),
-    capgain_gross_25: capgainRate(reg, sp, needsSpouse, 25, 'capGainsGrossByRate'),
-    capgain_gross_30: capgainRate(reg, sp, needsSpouse, 30, 'capGainsGrossByRate'),
-    capgain_gross_35: capgainRate(reg, sp, needsSpouse, 35, 'capGainsGrossByRate'),
+    // שורה 1 בסעיף ג' בנספח ג (טופס 1322), "רווח חייב במס לפני קיזוז הפסדים" —
+    // לפי שיעור, משני בני הזוג יחד. תוקן 2026-08-25 (הבהרת יאיר): זו לא רווח הון
+    // בלבד — היא סכום משולב של רווח הון + דיבידנד + ריבית מני"ע באותו שיעור.
+    // המקור: capGainsGrossByRate/dividendsByRate/interestByRate שכבר חושבו פעם
+    // אחת ב-calcSecuritiesForOwner.
+    capgain_gross_15: capgainRate(reg, sp, needsSpouse, 15, 'capGainsGrossByRate') + capgainRate(reg, sp, needsSpouse, 15, 'dividendsByRate') + capgainRate(reg, sp, needsSpouse, 15, 'interestByRate'),
+    capgain_gross_20: capgainRate(reg, sp, needsSpouse, 20, 'capGainsGrossByRate') + capgainRate(reg, sp, needsSpouse, 20, 'dividendsByRate') + capgainRate(reg, sp, needsSpouse, 20, 'interestByRate'),
+    capgain_gross_25: capgainRate(reg, sp, needsSpouse, 25, 'capGainsGrossByRate') + capgainRate(reg, sp, needsSpouse, 25, 'dividendsByRate') + capgainRate(reg, sp, needsSpouse, 25, 'interestByRate'),
+    capgain_gross_30: capgainRate(reg, sp, needsSpouse, 30, 'capGainsGrossByRate') + capgainRate(reg, sp, needsSpouse, 30, 'dividendsByRate') + capgainRate(reg, sp, needsSpouse, 30, 'interestByRate'),
+    capgain_gross_35: capgainRate(reg, sp, needsSpouse, 35, 'capGainsGrossByRate') + capgainRate(reg, sp, needsSpouse, 35, 'dividendsByRate') + capgainRate(reg, sp, needsSpouse, 35, 'interestByRate'),
     // הפסד הון ששימש לקיזוז רווח הון (שורה 2 בסעיף ג', "קיזוז הפסדי הון שוטפים
     // מניירות ערך") = ברוטו פחות נטו, לפי שיעור — כמה מהרווח הגולמי בכל שיעור
     // "נאכל" ע"י ההפסד שקוזז (השיעורים הגבוהים נכנסים ראשונים, ר' calcSecuritiesForOwner).
@@ -6422,48 +6479,59 @@ async function fillForm1322Extras(pdfDoc, pdfjsDoc, data) {
   });
   if (certs.length > SECTION_B_SLOTS.length) skipped.push('bank_names_overflow (יותר מ-4 אישורי בנק — הטופס תומך רק ב-4, יש להשלים ידנית)');
 
-  // טבלת עזר לקיזוז יתרת הפסד — שורה 1 ("הכנסה מריבית ודיבידנד מניירות ערך" לפי
-  // שיעור, ברוטו). שורה 2 ("קיזוז הפסד הון שוטף...") ותיבת "העברה לשדות" למטה —
-  // לפי הנחיית המשתמש בפירוש — מוצגות עם סכום ההפסד שקוזז בגין רווחי הון (אותו
-  // ערך כמו שורה 2 בסעיף ג', ר' capgain_loss_offset_25 ב-computeFormValues),
-  // ולא סכום הכנסת ריבית/דיבידנד עצמה. שתי השורות לא ניתנות לחיפוש טקסט חד-משמעי
-  // (תוויות מפוצלות למספר מילים) — נמדדו ידנית מול הטופס הריק לשנת 2025.
+  // תוקן 2026-08-25 (הבהרה מפורשת של יאיר): שורה 1 בסעיף ג' ("רווח חייב במס לפני
+  // קיזוז הפסדים") היא סכום משולב של רווח הון + דיבידנד + ריבית מני"ע באותו
+  // שיעור, ומחושבת כבר ב-computeFormValues (capgain_gross_*) - היא לא מפוצלת בין
+  // הטבלה הראשית לטבלת העזר. שיבוץ נפרד של הכנסת דיבידנד/ריבית ("incomeByRate")
+  // בשורה 1 של "טבלת עזר לקיזוז יתרת הפסד" (כפי שנעשה כאן קודם) היה טעות - הוסר.
+  // טבלת העזר עצמה (שורה 2 ומטה) לא נוגעים בה יותר.
   const { reg: __r, sp: __s, needsSpouse: __ns } = getRefundBreakdown(data);
-  const incomeByRate = (r) => Math.round(
-    ((__r.securities.dividendsByRate[r] || 0) + (__r.securities.interestByRate[r] || 0)) +
-    (__ns ? ((__s.securities.dividendsByRate[r] || 0) + (__s.securities.interestByRate[r] || 0)) : 0)
+  // רווח הון+דיבידנד+ריבית נטו (אחרי קיזוז הפסד) לפי שיעור, משני בני הזוג יחד -
+  // "שורה 6" (הכנסה חייבת) בסעיף ג' - ר' capgainRate למעלה בקובץ, אותה נוסחה, רק
+  // שכאן אין גישה ישירה ל-reg/sp של computeFormValues אלא ל-__r/__s המקומיים.
+  const capgainRateExtras = (r, key) => Math.round(
+    ((__r.securities[key] && __r.securities[key][r]) || 0) + (__ns ? ((__s.securities[key] && __s.securities[key][r]) || 0) : 0)
   );
-  const HELPER_ROW1_Y = fy1301(580) + 2;
-  const HELPER_ROW2_Y = fy1301(608) + 2;
+  // שורה 6 = שורה 1 (משולב, capgain_gross_r) פחות שורה 2 (capgain_loss_offset_r) =
+  // capGainsNetByRate[r] (שכבר "רווח הון פחות הפסד") + דיבידנד[r] + ריבית[r].
+  const taxableIncomeByRate = (r) => capgainRateExtras(r, 'capGainsNetByRate') + capgainRateExtras(r, 'dividendsByRate') + capgainRateExtras(r, 'interestByRate');
   const HELPER_ROW_X = { 30: 87, 25: 161, 20: 235, 15: 309 };
-  const capgainOffsetByRate = { 30: values.capgain_loss_offset_30, 25: values.capgain_loss_offset_25, 20: values.capgain_loss_offset_20, 15: values.capgain_loss_offset_15 };
-  let helperRow1Any = false, helperRow2Any = false;
-  [30, 25, 20, 15].forEach((r) => {
-    const amt = incomeByRate(r);
-    if (amt > 0) {
-      drawEndingAt(page0, { x: HELPER_ROW_X[r], y: HELPER_ROW1_Y }, amt, checkFont);
-      filled.push('helper_table_income_' + r); helperRow1Any = true;
-    }
-    const offAmt = capgainOffsetByRate[r];
-    if (offAmt > 0) {
-      drawEndingAt(page0, { x: HELPER_ROW_X[r], y: HELPER_ROW2_Y }, offAmt, checkFont);
-      filled.push('helper_table_offset_' + r); helperRow2Any = true;
-    }
-  });
-  if (!helperRow1Any) skipped.push('helper_table_row1 (אין הכנסת ריבית/דיבידנד מני"ע בשיעורים אלה)');
-  if (!helperRow2Any) skipped.push('helper_table_row2 (לא קוזז הפסד כנגד רווח הון בשיעורים אלה)');
-  skipped.push('helper_table_row3 (קיזוז הפסד שנוצר עד 31.12.05 — האשף לא מפריד בין הפסד "שוטף" לבין הפסד "עד 2005"; כל הקיזוז מיוחס לשורה 2)');
 
-  // הסכום המועבר לשדות 055/141/157/067/060 בטופס 1301 — לפי הנחיית המשתמש, אותו
-  // סכום כמו שורה 2 בסעיף ג'/שורה 2 בטבלת העזר (טור 25%): סכום ההפסד שקוזז בגין
-  // רווחי הון. ממוקם תחת טור ה-25% ולא ליד ה-x של התווית עצמה.
+  // 6. הכנסה חייבת (חישוב 1-2-3-4-5) בסעיף ג' עצמו — שורה 6 בטבלה הראשית "ג.
+  // הכנסה מניירות ערך". לשורה הזו אין קוד שדה מודפס על הטופס (מאומת מול הטופס
+  // הריק - אין קוד מתחת ל"6. הכנסה חייבת") - לכן ממקמים אותה לפי אותו x כמו שורה 1
+  // (קודי capgain_gross_* לאותו שיעור) ולפי y של תווית השורה עצמה. תוקן
+  // 2026-08-25: קודם כלל לא נכתב (הבדיקה בפועל של יאיר הראתה שדה 6 ריק בטופס).
+  const CAPGAIN_GROSS_CODE_BY_RATE = { 15: '12', 20: '10', 25: '13', 30: '48', 35: '44' };
+  const row6LabelPositions = await findLabelPositionsContaining(pdfjsDoc, 0, '1-2-3-4-5');
+  if (row6LabelPositions.length) {
+    const row6Y = row6LabelPositions[0].y;
+    let row6Any = false;
+    for (const r of [15, 20, 25, 30, 35]) {
+      const net = taxableIncomeByRate(r);
+      if (net <= 0) continue;
+      const codePositions = await findFieldPositionsOnPage(pdfjsDoc, 0, CAPGAIN_GROSS_CODE_BY_RATE[r]);
+      if (!codePositions.length) continue;
+      drawEndingAt(page0, { x: codePositions[0].x, y: row6Y }, net, checkFont);
+      filled.push('capgain_taxable_income_' + r); row6Any = true;
+    }
+    if (!row6Any) skipped.push('capgain_taxable_income_row6 (אין הכנסה חייבת חיובית בשום שיעור)');
+  } else {
+    skipped.push('capgain_taxable_income_row6 (לא אותרה שורת התווית בטופס)');
+  }
+
+  // הסכום המועבר לשדות 055/141/157/067/060 בטופס 1301 - שורה 6 שלעיל (הכנסה
+  // חייבת משולבת: רווח הון+דיבידנד+ריבית, נטו) - ר' שדה 157/257 ב-computeFormValues
+  // (interest25_registered/spouse), שכבר מצטבר עם אותו ערך; כאן רק הציור על
+  // עמוד נספח ג עצמו, לצד טור ה-25% תחת שורת ה"העברה לשדות" (לא ליד ה-x של
+  // התווית עצמה - ר' תיקון pdf.js למטה).
   // תיקון: pdf.js מאחד את כל השורה "העברה לשדות 055/141/157/067/060" לפריט טקסט
   // אחד — placeNearLabel (המבוסס על התאמה מדויקת) לא מצא כלום. חיפוש לפי הכלה
   // רק כדי לאתר את שורת התווית (y), ומציירים תחת טור 25% ולא ליד ה-x שלה.
-  const transferOffset25 = values.capgain_loss_offset_25;
+  const transferNet25 = taxableIncomeByRate(25);
   const transferLabelPositions = await findLabelPositionsContaining(pdfjsDoc, 0, '055/141/157/067/060');
-  if (transferOffset25 > 0 && transferLabelPositions.length) {
-    drawEndingAt(page0, { x: HELPER_ROW_X[25], y: transferLabelPositions[0].y }, transferOffset25, checkFont);
+  if (transferNet25 > 0 && transferLabelPositions.length) {
+    drawEndingAt(page0, { x: HELPER_ROW_X[25], y: transferLabelPositions[0].y }, transferNet25, checkFont);
     filled.push('interest_dividend_25_transfer');
   } else skipped.push('interest_dividend_25_transfer');
 
