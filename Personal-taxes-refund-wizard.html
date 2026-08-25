@@ -5701,23 +5701,31 @@ function computeFormValues(data) {
     // מספר אישורי 867 (בנק) שצורפו — שדה 54/037 בטופס 1301.
     securities_certificates_count: (data.securities || []).length,
     // שורה 1 בסעיף ג' בנספח ג (טופס 1322), "רווח חייב במס לפני קיזוז הפסדים" —
-    // לפי שיעור, משני בני הזוג יחד. תוקן 2026-08-25 (הבהרת יאיר): זו לא רווח הון
-    // בלבד — היא סכום משולב של רווח הון + דיבידנד + ריבית מני"ע באותו שיעור.
-    // המקור: capGainsGrossByRate/dividendsByRate/interestByRate שכבר חושבו פעם
-    // אחת ב-calcSecuritiesForOwner.
-    capgain_gross_15: capgainRate(reg, sp, needsSpouse, 15, 'capGainsGrossByRate') + capgainRate(reg, sp, needsSpouse, 15, 'dividendsByRate') + capgainRate(reg, sp, needsSpouse, 15, 'interestByRate'),
-    capgain_gross_20: capgainRate(reg, sp, needsSpouse, 20, 'capGainsGrossByRate') + capgainRate(reg, sp, needsSpouse, 20, 'dividendsByRate') + capgainRate(reg, sp, needsSpouse, 20, 'interestByRate'),
-    capgain_gross_25: capgainRate(reg, sp, needsSpouse, 25, 'capGainsGrossByRate') + capgainRate(reg, sp, needsSpouse, 25, 'dividendsByRate') + capgainRate(reg, sp, needsSpouse, 25, 'interestByRate'),
-    capgain_gross_30: capgainRate(reg, sp, needsSpouse, 30, 'capGainsGrossByRate') + capgainRate(reg, sp, needsSpouse, 30, 'dividendsByRate') + capgainRate(reg, sp, needsSpouse, 30, 'interestByRate'),
-    capgain_gross_35: capgainRate(reg, sp, needsSpouse, 35, 'capGainsGrossByRate') + capgainRate(reg, sp, needsSpouse, 35, 'dividendsByRate') + capgainRate(reg, sp, needsSpouse, 35, 'interestByRate'),
-    // הפסד הון ששימש לקיזוז רווח הון (שורה 2 בסעיף ג', "קיזוז הפסדי הון שוטפים
-    // מניירות ערך") = ברוטו פחות נטו, לפי שיעור — כמה מהרווח הגולמי בכל שיעור
-    // "נאכל" ע"י ההפסד שקוזז (השיעורים הגבוהים נכנסים ראשונים, ר' calcSecuritiesForOwner).
+    // רווח הון בלבד (לא כולל דיבידנד/ריבית - אלה בטבלת העזר הנפרדת שמתחת, ר'
+    // fillForm1322Extras). תוקן 2026-08-25 (הבהרה חוזרת של יאיר): שילוב דיבידנד/
+    // ריבית לתוך שורה 1 היה טעות - הוחזר להפרדה המקורית.
+    capgain_gross_15: capgainRate(reg, sp, needsSpouse, 15, 'capGainsGrossByRate'),
+    capgain_gross_20: capgainRate(reg, sp, needsSpouse, 20, 'capGainsGrossByRate'),
+    capgain_gross_25: capgainRate(reg, sp, needsSpouse, 25, 'capGainsGrossByRate'),
+    capgain_gross_30: capgainRate(reg, sp, needsSpouse, 30, 'capGainsGrossByRate'),
+    capgain_gross_35: capgainRate(reg, sp, needsSpouse, 35, 'capGainsGrossByRate'),
+    // הפסד הון ששימש לקיזוז רווח הון = ברוטו פחות נטו, לפי שיעור (זהו הסכום
+    // ה"מלא" שמוצג בטבלת העזר, שורה 2 - ר' fillForm1322Extras).
     capgain_loss_offset_15: capgainRate(reg, sp, needsSpouse, 15, 'capGainsGrossByRate') - capgainRate(reg, sp, needsSpouse, 15, 'capGainsNetByRate'),
     capgain_loss_offset_20: capgainRate(reg, sp, needsSpouse, 20, 'capGainsGrossByRate') - capgainRate(reg, sp, needsSpouse, 20, 'capGainsNetByRate'),
     capgain_loss_offset_25: capgainRate(reg, sp, needsSpouse, 25, 'capGainsGrossByRate') - capgainRate(reg, sp, needsSpouse, 25, 'capGainsNetByRate'),
     capgain_loss_offset_30: capgainRate(reg, sp, needsSpouse, 30, 'capGainsGrossByRate') - capgainRate(reg, sp, needsSpouse, 30, 'capGainsNetByRate'),
     capgain_loss_offset_35: capgainRate(reg, sp, needsSpouse, 35, 'capGainsGrossByRate') - capgainRate(reg, sp, needsSpouse, 35, 'capGainsNetByRate'),
+    // שורה 2 **בטבלה הראשית** (לא בטבלת העזר!): לפי הבהרת יאיר 2026-08-25, ההפסד
+    // הזמין לקיזוז מול רווח ההון הוא לא הסכום המלא (capgain_loss_offset_r) אלא
+    // אותו סכום פחות מה שכבר "נאכל" ע"י דיבידנד+ריבית באותו שיעור (טבלת העזר,
+    // שורת הסיכום "העברה לשדות") - כי הקיזוז מול ריבית/דיבידנד קודם לקיזוז מול
+    // רווח הון. למשל 25%: 16,538 (הפסד מלא) פחות 9,138 (דיבידנד+ריבית) = 7,400.
+    capgain_loss_offset_after_div_interest_15: Math.max(0, capgainRate(reg, sp, needsSpouse, 15, 'capGainsGrossByRate') - capgainRate(reg, sp, needsSpouse, 15, 'capGainsNetByRate') - capgainRate(reg, sp, needsSpouse, 15, 'dividendsByRate') - capgainRate(reg, sp, needsSpouse, 15, 'interestByRate')),
+    capgain_loss_offset_after_div_interest_20: Math.max(0, capgainRate(reg, sp, needsSpouse, 20, 'capGainsGrossByRate') - capgainRate(reg, sp, needsSpouse, 20, 'capGainsNetByRate') - capgainRate(reg, sp, needsSpouse, 20, 'dividendsByRate') - capgainRate(reg, sp, needsSpouse, 20, 'interestByRate')),
+    capgain_loss_offset_after_div_interest_25: Math.max(0, capgainRate(reg, sp, needsSpouse, 25, 'capGainsGrossByRate') - capgainRate(reg, sp, needsSpouse, 25, 'capGainsNetByRate') - capgainRate(reg, sp, needsSpouse, 25, 'dividendsByRate') - capgainRate(reg, sp, needsSpouse, 25, 'interestByRate')),
+    capgain_loss_offset_after_div_interest_30: Math.max(0, capgainRate(reg, sp, needsSpouse, 30, 'capGainsGrossByRate') - capgainRate(reg, sp, needsSpouse, 30, 'capGainsNetByRate') - capgainRate(reg, sp, needsSpouse, 30, 'dividendsByRate') - capgainRate(reg, sp, needsSpouse, 30, 'interestByRate')),
+    capgain_loss_offset_after_div_interest_35: Math.max(0, capgainRate(reg, sp, needsSpouse, 35, 'capGainsGrossByRate') - capgainRate(reg, sp, needsSpouse, 35, 'capGainsNetByRate') - capgainRate(reg, sp, needsSpouse, 35, 'dividendsByRate') - capgainRate(reg, sp, needsSpouse, 35, 'interestByRate')),
     // הפסד הון להעברה לשנת המס הבאה (יתרת הפסד שלא נוצלה כלל, אחרי קיזוז מול
     // רווח הון, דיבידנד וריבית) — נספח ג, "הפסדים להעברה מניירות ערך".
     securities_loss_carryforward: Math.round(reg.securities.unusedLoss + (needsSpouse ? sp.securities.unusedLoss : 0)),
@@ -5762,9 +5770,11 @@ const PDF_FIELD_MAP_1322 = [
   [0, '12', 'capgain_gross_15'], [0, '10', 'capgain_gross_20'], [0, '13', 'capgain_gross_25'],
   [0, '48', 'capgain_gross_30'], [0, '44', 'capgain_gross_35'],
   // ג. שורה 2 ("קיזוז הפסדי הון שוטפים מניירות ערך") — קודים אומתו כייחודיים
-  // בעמוד מול הטופס הריק (מופע יחיד לכל אחד, אותה שורה y).
-  [0, '32', 'capgain_loss_offset_15'], [0, '30', 'capgain_loss_offset_20'], [0, '33', 'capgain_loss_offset_25'],
-  [0, '49', 'capgain_loss_offset_30'], [0, '36', 'capgain_loss_offset_35'],
+  // בעמוד מול הטופס הריק (מופע יחיד לכל אחד, אותה שורה y). תוקן 2026-08-25:
+  // השדה בטבלה הראשית הוא ההפסד שנותר אחרי קיזוז מול דיבידנד/ריבית (טבלת העזר
+  // שמתחת), לא הסכום המלא - ר' capgain_loss_offset_after_div_interest_* לעיל.
+  [0, '32', 'capgain_loss_offset_after_div_interest_15'], [0, '30', 'capgain_loss_offset_after_div_interest_20'], [0, '33', 'capgain_loss_offset_after_div_interest_25'],
+  [0, '49', 'capgain_loss_offset_after_div_interest_30'], [0, '36', 'capgain_loss_offset_after_div_interest_35'],
 ];
 
 function b64ToBytes(b64) {
@@ -6479,23 +6489,49 @@ async function fillForm1322Extras(pdfDoc, pdfjsDoc, data) {
   });
   if (certs.length > SECTION_B_SLOTS.length) skipped.push('bank_names_overflow (יותר מ-4 אישורי בנק — הטופס תומך רק ב-4, יש להשלים ידנית)');
 
-  // תוקן 2026-08-25 (הבהרה מפורשת של יאיר): שורה 1 בסעיף ג' ("רווח חייב במס לפני
-  // קיזוז הפסדים") היא סכום משולב של רווח הון + דיבידנד + ריבית מני"ע באותו
-  // שיעור, ומחושבת כבר ב-computeFormValues (capgain_gross_*) - היא לא מפוצלת בין
-  // הטבלה הראשית לטבלת העזר. שיבוץ נפרד של הכנסת דיבידנד/ריבית ("incomeByRate")
-  // בשורה 1 של "טבלת עזר לקיזוז יתרת הפסד" (כפי שנעשה כאן קודם) היה טעות - הוסר.
-  // טבלת העזר עצמה (שורה 2 ומטה) לא נוגעים בה יותר.
+  // תוקן 2026-08-25 (הבהרה סופית של יאיר, אחרי כמה סבבים): שורה 1 בטבלה הראשית
+  // ("ג. הכנסה מניירות ערך") היא רווח הון בלבד - דיבידנד/ריבית נשארים בטבלת העזר
+  // הנפרדת ("טבלת עזר לקיזוז יתרת הפסד..."), שורה 1 שלה, כמו במקור. מה שכן קיזוז
+  // ההפסד מול רווח ההון בטבלה הראשית (שורה 2) הוא לא הסכום המלא של ההפסד -
+  // ר' capgain_loss_offset_after_div_interest_* ב-computeFormValues: ההפסד קודם
+  // "נאכל" ע"י דיבידנד/ריבית (טבלת העזר, שורת הסיכום "העברה לשדות"), ורק היתרה
+  // עוברת לקזז רווח הון.
   const { reg: __r, sp: __s, needsSpouse: __ns } = getRefundBreakdown(data);
-  // רווח הון+דיבידנד+ריבית נטו (אחרי קיזוז הפסד) לפי שיעור, משני בני הזוג יחד -
-  // "שורה 6" (הכנסה חייבת) בסעיף ג' - ר' capgainRate למעלה בקובץ, אותה נוסחה, רק
-  // שכאן אין גישה ישירה ל-reg/sp של computeFormValues אלא ל-__r/__s המקומיים.
   const capgainRateExtras = (r, key) => Math.round(
     ((__r.securities[key] && __r.securities[key][r]) || 0) + (__ns ? ((__s.securities[key] && __s.securities[key][r]) || 0) : 0)
   );
-  // שורה 6 = שורה 1 (משולב, capgain_gross_r) פחות שורה 2 (capgain_loss_offset_r) =
-  // capGainsNetByRate[r] (שכבר "רווח הון פחות הפסד") + דיבידנד[r] + ריבית[r].
+  // שורה 6 (הכנסה חייבת, טבלה ראשית) = שורה 1 (capgain_gross_r, רווח הון בלבד)
+  // פחות שורה 2 (capgain_loss_offset_after_div_interest_r, ההפסד שנותר אחרי
+  // קיזוז דיבידנד/ריבית) = capGainsNetByRate[r] + דיבידנד[r] + ריבית[r] (זהה
+  // אלגברית, ר' תיעוד 2026-08-25 בשיחה - שני החישובים מניבים אותה תוצאה).
   const taxableIncomeByRate = (r) => capgainRateExtras(r, 'capGainsNetByRate') + capgainRateExtras(r, 'dividendsByRate') + capgainRateExtras(r, 'interestByRate');
+  // הכנסת דיבידנד+ריבית ברוטו, וההפסד המלא (לפני קיזוז דיבידנד/ריבית) - לפי
+  // שיעור, לטבלת העזר עצמה (לא הטבלה הראשית).
+  const helperIncomeByRate = (r) => capgainRateExtras(r, 'dividendsByRate') + capgainRateExtras(r, 'interestByRate');
+  const helperLossFullByRate = (r) => capgainRateExtras(r, 'capGainsGrossByRate') - capgainRateExtras(r, 'capGainsNetByRate');
+  // שורת הסיכום "העברה לשדות" בטבלת העזר = שורה 2 (הפסד מלא) פחות שורה 1 (הכנסת
+  // דיבידנד/ריבית) - ההפסד שנותר אחרי שכיסה את הדיבידנד/ריבית, שעובר לקזז רווח
+  // הון בטבלה הראשית (ר' capgain_loss_offset_after_div_interest_25 לעיל).
+  const helperTransferByRate = (r) => Math.max(0, helperLossFullByRate(r) - helperIncomeByRate(r));
+  const HELPER_ROW1_Y = fy1301(580) + 2;
+  const HELPER_ROW2_Y = fy1301(608) + 2;
   const HELPER_ROW_X = { 30: 87, 25: 161, 20: 235, 15: 309 };
+  let helperRow1Any = false, helperRow2Any = false;
+  [30, 25, 20, 15].forEach((r) => {
+    const amt = helperIncomeByRate(r);
+    if (amt > 0) {
+      drawEndingAt(page0, { x: HELPER_ROW_X[r], y: HELPER_ROW1_Y }, amt, checkFont);
+      filled.push('helper_table_income_' + r); helperRow1Any = true;
+    }
+    const offAmt = helperLossFullByRate(r);
+    if (offAmt > 0) {
+      drawEndingAt(page0, { x: HELPER_ROW_X[r], y: HELPER_ROW2_Y }, offAmt, checkFont);
+      filled.push('helper_table_offset_' + r); helperRow2Any = true;
+    }
+  });
+  if (!helperRow1Any) skipped.push('helper_table_row1 (אין הכנסת ריבית/דיבידנד מני"ע בשיעורים אלה)');
+  if (!helperRow2Any) skipped.push('helper_table_row2 (לא קוזז הפסד כנגד רווח הון בשיעורים אלה)');
+  skipped.push('helper_table_row3 (קיזוז הפסד שנוצר עד 31.12.05 — האשף לא מפריד בין הפסד "שוטף" לבין הפסד "עד 2005"; כל הקיזוז מיוחס לשורה 2)');
 
   // 6. הכנסה חייבת (חישוב 1-2-3-4-5) בסעיף ג' עצמו — שורה 6 בטבלה הראשית "ג.
   // הכנסה מניירות ערך". לשורה הזו אין קוד שדה מודפס על הטופס (מאומת מול הטופס
@@ -6520,18 +6556,18 @@ async function fillForm1322Extras(pdfDoc, pdfjsDoc, data) {
     skipped.push('capgain_taxable_income_row6 (לא אותרה שורת התווית בטופס)');
   }
 
-  // הסכום המועבר לשדות 055/141/157/067/060 בטופס 1301 - שורה 6 שלעיל (הכנסה
-  // חייבת משולבת: רווח הון+דיבידנד+ריבית, נטו) - ר' שדה 157/257 ב-computeFormValues
-  // (interest25_registered/spouse), שכבר מצטבר עם אותו ערך; כאן רק הציור על
-  // עמוד נספח ג עצמו, לצד טור ה-25% תחת שורת ה"העברה לשדות" (לא ליד ה-x של
-  // התווית עצמה - ר' תיקון pdf.js למטה).
+  // הסכום שנכתב בשורת הסיכום "העברה לשדות" בטבלת העזר עצמה - ר' helperTransferByRate
+  // לעיל (הפסד מלא פחות דיבידנד/ריבית, למשל 16,538-9,138=7,400 ב-25%). זה גם
+  // בדיוק הערך שנכתב בשורה 2 של הטבלה הראשית (capgain_loss_offset_after_div_interest_25,
+  // דרך PDF_FIELD_MAP_1322). שדה 157/257 בטופס 1301 מקבל ערך אחר (שורה 6 המלאה,
+  // ר' computeFormValues) - לא את הערך הזה.
   // תיקון: pdf.js מאחד את כל השורה "העברה לשדות 055/141/157/067/060" לפריט טקסט
   // אחד — placeNearLabel (המבוסס על התאמה מדויקת) לא מצא כלום. חיפוש לפי הכלה
   // רק כדי לאתר את שורת התווית (y), ומציירים תחת טור 25% ולא ליד ה-x שלה.
-  const transferNet25 = taxableIncomeByRate(25);
+  const transferAt25 = helperTransferByRate(25);
   const transferLabelPositions = await findLabelPositionsContaining(pdfjsDoc, 0, '055/141/157/067/060');
-  if (transferNet25 > 0 && transferLabelPositions.length) {
-    drawEndingAt(page0, { x: HELPER_ROW_X[25], y: transferLabelPositions[0].y }, transferNet25, checkFont);
+  if (transferAt25 > 0 && transferLabelPositions.length) {
+    drawEndingAt(page0, { x: HELPER_ROW_X[25], y: transferLabelPositions[0].y }, transferAt25, checkFont);
     filled.push('interest_dividend_25_transfer');
   } else skipped.push('interest_dividend_25_transfer');
 
