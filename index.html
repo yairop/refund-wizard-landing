@@ -164,10 +164,39 @@ document.getElementById('leadForm').addEventListener('submit',function(e){
     method:'POST',
     headers:{'Content-Type':'application/json','Accept':'application/json'},
     body:JSON.stringify({_subject:'פגישת הדגמה אשף החזרי מס',_template:'table',_captcha:'false',_replyto:email,'שם מלא':name,'טלפון':phone,'אימייל':email,'סוג פונה':applicantTypeLabel})
-  }).catch(()=>{}).finally(()=>{
-    document.getElementById('formState').style.display='none';
-    document.getElementById('successState').style.display='flex';
-  });
+  
+}).then(async (response) => {
+
+  const data = await response.json();
+
+  // Verify that FormSubmit accepted the submission
+  if (
+    !response.ok ||
+    (data.success !== true && data.success !== 'true')
+  ) {
+    throw new Error('Form submission failed');
+  }
+
+  // Show the success message only after confirmation
+  document.getElementById('formState').style.display = 'none';
+  document.getElementById('successState').style.display = 'flex';
+
+  // Report a successful lead to Google Ads
+  if (typeof gtag === 'function') {
+    gtag('event', 'conversion', {
+      'send_to': 'AW-18441916195/dliUCI2LmPOcEKOe5dlE',
+      'value': 1.0,
+      'currency': 'ILS'
+    });
+  }
+
+}).catch((error) => {
+
+  console.error('Lead submission failed', error);
+
+  alert('שליחת הפרטים נכשלה. אנא נסו שוב.');
+
+});
 });
 </script>
 </body>
